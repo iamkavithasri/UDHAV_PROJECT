@@ -2,14 +2,9 @@ import React, { useState } from 'react'
 import Header from '../components/Header'
 import Button from '../components/Button'
 import { Input, Select, Textarea } from '../components/Input'
+import { useEffect } from 'react'
+import { getTasks, addTask, updateTask, deleteTask } from '../services/tasks'
 
-const INITIAL_TASKS = [
-  { id: 1, title: 'Medical Camp Setup',        description: 'Setup and manage medical equipment for the camp in Tambaram.', category: 'Medical',     priority: 'High',   status: 'Open',        deadline: '2025-02-15', requiredSkills: ['Medical', 'First Aid'] },
-  { id: 2, title: 'Food Distribution Drive',   description: 'Organize and distribute food packets to 500 families.',        category: 'Logistics',   priority: 'High',   status: 'In Progress', deadline: '2025-02-10', requiredSkills: ['Logistics', 'Cooking'] },
-  { id: 3, title: 'Children\'s Education',     description: 'Conduct weekend literacy classes for underprivileged kids.',   category: 'Education',   priority: 'Medium', status: 'Open',        deadline: '2025-03-01', requiredSkills: ['Teaching'] },
-  { id: 4, title: 'Website Redesign',          description: 'Redesign the organization website with modern UI.',            category: 'IT',          priority: 'Low',    status: 'Open',        deadline: '2025-03-20', requiredSkills: ['IT Support', 'Design'] },
-  { id: 5, title: 'Elder Care Program',        description: 'Weekly visits and assistance for elderly residents.',          category: 'Healthcare',  priority: 'Medium', status: 'Completed',   deadline: '2025-01-30', requiredSkills: ['Counseling'] },
-]
 
 const PRIORITY_COLORS = { High: 'priority-high', Medium: 'priority-medium', Low: 'priority-low' }
 const STATUS_BADGES    = { Open: 'badge-blue', 'In Progress': 'badge-gold', Completed: 'badge-green', Cancelled: 'badge-red' }
@@ -20,7 +15,12 @@ const EMPTY_FORM = {
 }
 
 export default function TaskScreen({ navigate, user, handleLogout }) {
-  const [tasks, setTasks] = useState(INITIAL_TASKS)
+  const [tasks, setTasks] = useState([])
+
+  useEffect(() => {
+    getTasks().then(setTasks)
+  }, [])
+  
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('All')
   const [filterPriority, setFilterPriority] = useState('All')
@@ -58,21 +58,22 @@ export default function TaskScreen({ navigate, user, handleLogout }) {
     return e
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
     const skillArr = form.requiredSkills.split(',').map((s) => s.trim()).filter(Boolean)
-
     if (editTarget) {
-      setTasks((prev) => prev.map((t) => t.id === editTarget ? { ...t, ...form, requiredSkills: skillArr } : t))
+      await updateTask(editTarget, { ...form, requiredSkills: skillArr })
     } else {
-      setTasks((prev) => [...prev, { id: Date.now(), ...form, requiredSkills: skillArr }])
+      await addTask({ ...form, requiredSkills: skillArr })
     }
+    setTasks(await getTasks())
     setShowModal(false)
   }
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Delete this task?')) {
+      await deleteTask(id)
       setTasks((prev) => prev.filter((t) => t.id !== id))
     }
   }

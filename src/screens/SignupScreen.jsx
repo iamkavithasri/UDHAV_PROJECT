@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import Button from '../components/Button'
 import { Input } from '../components/Input'
+import { signup } from '../services/auth'
 
 export default function SignupScreen({ navigate, onLogin }) {
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' })
@@ -19,16 +20,19 @@ export default function SignupScreen({ navigate, onLogin }) {
     return e
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
     setLoading(true)
-    // Replace with firebase auth.createUser()
-    setTimeout(() => {
+    try {
+      const cred = await signup(form.email, form.password)
+      onLogin({ email: cred.user.email, name: form.name })
+    } catch (err) {
+      setErrors({ email: err.message })
+    } finally {
       setLoading(false)
-      onLogin({ email: form.email, name: form.name })
-    }, 900)
+    }
   }
 
   const handleChange = (field) => (e) => {

@@ -1,15 +1,8 @@
 import React, { useState } from 'react'
 import Header from '../components/Header'
 import Button from '../components/Button'
+import { getAssignments, updateAssignmentStatus, removeAssignment } from '../services/assignments'
 
-const INITIAL_ASSIGNMENTS = [
-  { id: 1,  taskTitle: 'Medical Camp Setup',       volunteerName: 'Priya Sharma',  status: 'In Progress', assignedDate: '2025-01-28', deadline: '2025-02-15', category: 'Medical',   priority: 'High' },
-  { id: 2,  taskTitle: 'Food Distribution Drive',  volunteerName: 'Ravi Kumar',    status: 'Pending',     assignedDate: '2025-01-27', deadline: '2025-02-10', category: 'Logistics', priority: 'High' },
-  { id: 3,  taskTitle: "Children's Education",     volunteerName: 'Anjali Mehta',  status: 'Pending',     assignedDate: '2025-01-26', deadline: '2025-03-01', category: 'Education', priority: 'Medium' },
-  { id: 4,  taskTitle: 'Website Redesign',         volunteerName: 'Suresh Pillai', status: 'Completed',   assignedDate: '2025-01-20', deadline: '2025-03-20', category: 'IT',        priority: 'Low' },
-  { id: 5,  taskTitle: 'Elder Care Program',       volunteerName: 'Meena Nair',    status: 'Completed',   assignedDate: '2025-01-15', deadline: '2025-01-30', category: 'Healthcare',priority: 'Medium' },
-  { id: 6,  taskTitle: 'Medical Camp Setup',       volunteerName: 'Meena Nair',    status: 'Pending',     assignedDate: '2025-01-28', deadline: '2025-02-15', category: 'Medical',   priority: 'High' },
-]
 
 const STATUS_FLOW = { Pending: 'In Progress', 'In Progress': 'Completed' }
 const STATUS_BADGES = { Pending: 'badge-gold', 'In Progress': 'badge-blue', Completed: 'badge-green', Cancelled: 'badge-red' }
@@ -18,7 +11,12 @@ const PRIORITY_COLORS = { High: '#ef4444', Medium: 'var(--amber-400)', Low: 'var
 const getInitials = (name) => name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
 
 export default function AssignmentScreen({ navigate, user, handleLogout }) {
-  const [assignments, setAssignments] = useState(INITIAL_ASSIGNMENTS)
+  const [assignments, setAssignments] = useState([])
+
+  useEffect(() => {
+    getAssignments().then(setAssignments)
+  }, [])
+  
   const [filterStatus, setFilterStatus] = useState('All')
   const [search, setSearch] = useState('')
 
@@ -29,17 +27,19 @@ export default function AssignmentScreen({ navigate, user, handleLogout }) {
     return matchStatus && matchSearch
   })
 
-  const advanceStatus = (id) => {
+  const advanceStatus = async (id) => {
+    const assignment = assignments.find((a) => a.id === id)
+    const nextStatus = STATUS_FLOW[assignment.status]
+    if (!nextStatus) return
+    await updateAssignmentStatus(id, nextStatus)
     setAssignments((prev) =>
-      prev.map((a) => a.id === id && STATUS_FLOW[a.status]
-        ? { ...a, status: STATUS_FLOW[a.status] }
-        : a
-      )
+      prev.map((a) => a.id === id ? { ...a, status: nextStatus } : a)
     )
   }
 
-  const cancelAssignment = (id) => {
+  const cancelAssignment = async (id) => {
     if (window.confirm('Cancel this assignment?')) {
+      await updateAssignmentStatus(id, 'Cancelled')
       setAssignments((prev) =>
         prev.map((a) => a.id === id ? { ...a, status: 'Cancelled' } : a)
       )

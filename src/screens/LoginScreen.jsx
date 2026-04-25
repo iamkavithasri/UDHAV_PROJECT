@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import Button from '../components/Button'
 import { Input } from '../components/Input'
+import { login } from '../services/auth'
 
 export default function LoginScreen({ navigate, onLogin }) {
   const [form, setForm] = useState({ email: '', password: '' })
@@ -21,11 +22,14 @@ export default function LoginScreen({ navigate, onLogin }) {
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
     setLoading(true)
-    // Simulate auth — replace with firebase auth.signIn()
-    setTimeout(() => {
+    try {
+      const cred = await login(form.email, form.password)
+      onLogin({ email: cred.user.email, name: cred.user.email.split('@')[0] })
+    } catch (err) {
+      setErrors({ email: 'Invalid email or password' })
+    } finally {
       setLoading(false)
-      onLogin({ email: form.email, name: form.email.split('@')[0] })
-    }, 900)
+    }
   }
 
   const handleChange = (field) => (e) => {

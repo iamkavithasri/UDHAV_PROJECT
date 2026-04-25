@@ -2,21 +2,19 @@ import React, { useState } from 'react'
 import Header from '../components/Header'
 import Button from '../components/Button'
 import { Input, Select } from '../components/Input'
+import { useEffect } from 'react'
+import { getVolunteers, addVolunteer, updateVolunteer, deleteVolunteer } from '../services/volunteers'
 
-const INITIAL_VOLUNTEERS = [
-  { id: 1, name: 'Priya Sharma',   email: 'priya@example.com',  skills: ['Medical', 'First Aid'], availability: 'Weekends', status: 'Active' },
-  { id: 2, name: 'Ravi Kumar',     email: 'ravi@example.com',   skills: ['Logistics', 'Driving'], availability: 'Full-time', status: 'Active' },
-  { id: 3, name: 'Anjali Mehta',   email: 'anjali@example.com', skills: ['Teaching', 'Counseling'], availability: 'Evenings', status: 'Active' },
-  { id: 4, name: 'Suresh Pillai',  email: 'suresh@example.com', skills: ['IT Support', 'Design'], availability: 'Weekends', status: 'Inactive' },
-  { id: 5, name: 'Meena Nair',     email: 'meena@example.com',  skills: ['Cooking', 'Nutrition'], availability: 'Full-time', status: 'Active' },
-]
-
-const SKILL_OPTIONS = ['Medical', 'First Aid', 'Logistics', 'Driving', 'Teaching', 'Counseling', 'IT Support', 'Design', 'Cooking', 'Nutrition', 'Construction', 'Translation']
 
 const EMPTY_FORM = { name: '', email: '', skills: '', availability: 'Weekends', status: 'Active' }
 
 export default function VolunteerScreen({ navigate, user, handleLogout }) {
-  const [volunteers, setVolunteers] = useState(INITIAL_VOLUNTEERS)
+  const [volunteers, setVolunteers] = useState([])
+
+  useEffect(() => {
+    getVolunteers().then(setVolunteers)
+  }, [])
+  
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [editTarget, setEditTarget] = useState(null)
@@ -52,27 +50,22 @@ export default function VolunteerScreen({ navigate, user, handleLogout }) {
     return e
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
-
     const skillArr = form.skills.split(',').map((s) => s.trim()).filter(Boolean)
-
     if (editTarget) {
-      setVolunteers((prev) =>
-        prev.map((v) => v.id === editTarget ? { ...v, ...form, skills: skillArr } : v)
-      )
+      await updateVolunteer(editTarget, { ...form, skills: skillArr })
     } else {
-      setVolunteers((prev) => [
-        ...prev,
-        { id: Date.now(), ...form, skills: skillArr },
-      ])
+      await addVolunteer({ ...form, skills: skillArr })
     }
+    setVolunteers(await getVolunteers())
     setShowModal(false)
   }
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Remove this volunteer?')) {
+      await deleteVolunteer(id)
       setVolunteers((prev) => prev.filter((v) => v.id !== id))
     }
   }

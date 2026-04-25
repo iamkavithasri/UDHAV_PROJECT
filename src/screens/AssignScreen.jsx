@@ -3,21 +3,11 @@ import Header from '../components/Header'
 import Button from '../components/Button'
 import { Select } from '../components/Input'
 import { findBestMatches, matchLabel, matchBadgeVariant } from '../utils/match'
+import { useEffect } from 'react'
+import { getVolunteers } from '../services/volunteers'
+import { getTasks } from '../services/tasks'
+import { assign } from '../services/assignments'
 
-const VOLUNTEERS = [
-  { id: 1, name: 'Priya Sharma',   email: 'priya@example.com',  skills: ['Medical', 'First Aid'], availability: 'Weekends', status: 'Active' },
-  { id: 2, name: 'Ravi Kumar',     email: 'ravi@example.com',   skills: ['Logistics', 'Driving'], availability: 'Full-time', status: 'Active' },
-  { id: 3, name: 'Anjali Mehta',   email: 'anjali@example.com', skills: ['Teaching', 'Counseling'], availability: 'Evenings', status: 'Active' },
-  { id: 4, name: 'Suresh Pillai',  email: 'suresh@example.com', skills: ['IT Support', 'Design'], availability: 'Weekends', status: 'Inactive' },
-  { id: 5, name: 'Meena Nair',     email: 'meena@example.com',  skills: ['Cooking', 'Nutrition'], availability: 'Full-time', status: 'Active' },
-]
-
-const TASKS = [
-  { id: 1, title: 'Medical Camp Setup',      category: 'Medical',   priority: 'High',   deadline: '2025-02-15', requiredSkills: ['Medical', 'First Aid'] },
-  { id: 2, title: 'Food Distribution Drive', category: 'Logistics', priority: 'High',   deadline: '2025-02-10', requiredSkills: ['Logistics', 'Cooking'] },
-  { id: 3, title: "Children's Education",    category: 'Education', priority: 'Medium', deadline: '2025-03-01', requiredSkills: ['Teaching'] },
-  { id: 4, title: 'Website Redesign',        category: 'IT',        priority: 'Low',    deadline: '2025-03-20', requiredSkills: ['IT Support', 'Design'] },
-]
 
 const getInitials = (name) => name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
 
@@ -27,42 +17,30 @@ export default function AssignScreen({ navigate, user, handleLogout }) {
   const [assignments, setAssignments] = useState([])
   const [toast, setToast] = useState(null)
 
-  const task = TASKS.find((t) => t.id === Number(selectedTask))
-  const matches = task ? findBestMatches(task, VOLUNTEERS) : []
+  const [volunteers, setVolunteers] = useState([])
+  const [tasks, setTasks] = useState([])
+
+  useEffect(() => {
+    getVolunteers().then(setVolunteers)
+    getTasks().then(setTasks)
+  }, [])
+
+  const task = tasks.find((t) => t.id === Number(selectedTask))
+  const matches = task ? findBestMatches(task, volunteers) : []
 
   const showToast = (msg) => {
     setToast(msg)
     setTimeout(() => setToast(null), 3000)
   }
 
-  const handleAssign = () => {
+  const handleAssign = async () => {
     if (!selectedTask || !selectedVolunteer) {
       showToast('⚠ Please select both a task and a volunteer')
       return
     }
-
-    const already = assignments.find(
-      (a) => a.taskId === Number(selectedTask) && a.volunteerId === Number(selectedVolunteer)
-    )
-    if (already) {
-      showToast('⚠ This volunteer is already assigned to this task')
-      return
-    }
-
-    const vol = VOLUNTEERS.find((v) => v.id === Number(selectedVolunteer))
-    const tsk = TASKS.find((t) => t.id === Number(selectedTask))
-    setAssignments((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        taskId: tsk.id,
-        volunteerId: vol.id,
-        taskTitle: tsk.title,
-        volunteerName: vol.name,
-        status: 'Pending',
-        assignedAt: new Date().toLocaleString('en-IN'),
-      },
-    ])
+    const vol = volunteers.find((v) => v.id === selectedVolunteer)
+    const tsk = tasks.find((t) => t.id === selectedTask)
+    await assign(selectedVolunteer, selectedTask)
     showToast(`✓ ${vol.name} assigned to "${tsk.title}"`)
     setSelectedVolunteer('')
   }
@@ -96,7 +74,7 @@ export default function AssignScreen({ navigate, user, handleLogout }) {
                   onChange={(e) => { setSelectedTask(e.target.value); setSelectedVolunteer('') }}
                 >
                   <option value="">— Choose a task —</option>
-                  {TASKS.map((t) => (
+                  {tasks.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.title} ({t.priority} priority)
                     </option>
@@ -126,7 +104,7 @@ export default function AssignScreen({ navigate, user, handleLogout }) {
                   onChange={(e) => setSelectedVolunteer(e.target.value)}
                 >
                   <option value="">— Choose a volunteer —</option>
-                  {VOLUNTEERS.filter((v) => v.status === 'Active').map((v) => (
+                  {volunteers.filter((v) => v.status === 'Active').map((v) => (
                     <option key={v.id} value={v.id}>{v.name}</option>
                   ))}
                 </Select>
