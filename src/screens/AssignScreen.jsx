@@ -40,7 +40,7 @@ export default function AssignScreen({ navigate, user, handleLogout }) {
     }
     const vol = volunteers.find((v) => v.id === selectedVolunteer)
     const tsk = tasks.find((t) => t.id === selectedTask)
-    await assign(selectedVolunteer, selectedTask)
+    await assign(vol, tsk)
     showToast(`✓ ${vol.name} assigned to "${tsk.title}"`)
     setSelectedVolunteer('')
   }

@@ -1,13 +1,21 @@
 import { db } from "./firebase";
-import {
-  collection, addDoc, getDocs, query, where, deleteDoc, doc,
-} from "firebase/firestore";
+import { collection,addDoc,getDocs,query,where,deleteDoc,doc,updateDoc } from "firebase/firestore";
 
 const col = collection(db, "assignments");
 
 // Assign a volunteer to a task
-export const assign = (volunteerId, taskId) =>
-  addDoc(col, { volunteerId, taskId, assignedAt: new Date() });
+export const assign = (volunteer, task) =>
+  addDoc(col, {
+    volunteerId: volunteer.id,
+    volunteerName: volunteer.name,
+    taskId: task.id,
+    taskTitle: task.title,
+    priority: task.priority,
+    category: task.category,
+    deadline: task.deadline,
+    status: 'Pending',
+    assignedDate: new Date().toISOString(),
+  });
 
 // Get all assignments
 export const getAssignments = async () => {
@@ -21,6 +29,9 @@ export const getAssignmentsByVolunteer = async (volunteerId) => {
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 };
+
+export const updateAssignmentStatus = (id, status) =>
+  updateDoc(doc(db, "assignments", id), { status })
 
 // Remove an assignment
 export const removeAssignment = (id) =>

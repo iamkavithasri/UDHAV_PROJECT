@@ -1,15 +1,21 @@
-import React, { useState } from 'react'
-import Header from '../components/Header'
 import Button from '../components/Button'
+import { useState } from 'react'
+import { useEffect } from 'react'
+import Header from '../components/Header'
 import { getAssignments, updateAssignmentStatus, removeAssignment } from '../services/assignments'
-
 
 const STATUS_FLOW = { Pending: 'In Progress', 'In Progress': 'Completed' }
 const STATUS_BADGES = { Pending: 'badge-gold', 'In Progress': 'badge-blue', Completed: 'badge-green', Cancelled: 'badge-red' }
 const PRIORITY_COLORS = { High: '#ef4444', Medium: 'var(--amber-400)', Low: 'var(--success)' }
 
-const getInitials = (name) => name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
-
+const getInitials = (name) =>
+  (name || 'NA')
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+    
 export default function AssignmentScreen({ navigate, user, handleLogout }) {
   const [assignments, setAssignments] = useState([])
 
@@ -22,8 +28,9 @@ export default function AssignmentScreen({ navigate, user, handleLogout }) {
 
   const filtered = assignments.filter((a) => {
     const matchStatus = filterStatus === 'All' || a.status === filterStatus
-    const matchSearch = a.taskTitle.toLowerCase().includes(search.toLowerCase()) ||
-      a.volunteerName.toLowerCase().includes(search.toLowerCase())
+    const matchSearch =
+      (a.taskTitle || '').toLowerCase().includes(search.toLowerCase()) ||
+      (a.volunteerName || '').toLowerCase().includes(search.toLowerCase())
     return matchStatus && matchSearch
   })
 
