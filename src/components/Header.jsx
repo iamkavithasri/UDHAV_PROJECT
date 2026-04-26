@@ -45,7 +45,7 @@ export default function Header({ currentScreen, navigate, user, handleLogout }) 
         <div className="sidebar-brand">
           <div className="sidebar-brand-icon">🌿</div>
           <div>
-            <div className="sidebar-brand-text">VolunteerHub</div>
+            <div className="sidebar-brand-text">UDHAV</div>
             <div className="sidebar-brand-sub">Mission Control</div>
           </div>
         </div>

@@ -42,7 +42,7 @@ export default function SignupScreen({ navigate, onLogin }) {
       <div className="auth-panel-left">
         <div className="auth-brand">
           <div className="auth-brand-logo">🌿</div>
-          <h1>VolunteerHub</h1>
+          <h1>UDHAV</h1>
           <p>Connect · Serve · Impact</p>
         </div>
 
