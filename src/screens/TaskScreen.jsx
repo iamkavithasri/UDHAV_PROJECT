@@ -2,12 +2,20 @@ import React, { useState } from 'react'
 import Header from '../components/Header'
 import Button from '../components/Button'
 import { Input, Select, Textarea } from '../components/Input'
-import { useEffect } from 'react'
-import { getTasks, addTask, updateTask, deleteTask } from '../services/tasks'
+import { generateTaskDescription } from "../services/gemini";
 
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY
+
+const INITIAL_TASKS = [
+  { id: 1, title: 'Medical Camp Setup', description: 'Setup and manage medical equipment for the camp in Tambaram.', category: 'Medical', priority: 'High', status: 'Open', deadline: '2025-02-15', requiredSkills: ['Medical', 'First Aid'] },
+  { id: 2, title: 'Food Distribution Drive', description: 'Organize and distribute food packets to 500 families.', category: 'Logistics', priority: 'High', status: 'In Progress', deadline: '2025-02-10', requiredSkills: ['Logistics', 'Cooking'] },
+  { id: 3, title: 'Children\'s Education', description: 'Conduct weekend literacy classes for underprivileged kids.', category: 'Education', priority: 'Medium', status: 'Open', deadline: '2025-03-01', requiredSkills: ['Teaching'] },
+  { id: 4, title: 'Website Redesign', description: 'Redesign the organization website with modern UI.', category: 'IT', priority: 'Low', status: 'Open', deadline: '2025-03-20', requiredSkills: ['IT Support', 'Design'] },
+  { id: 5, title: 'Elder Care Program', description: 'Weekly visits and assistance for elderly residents.', category: 'Healthcare', priority: 'Medium', status: 'Completed', deadline: '2025-01-30', requiredSkills: ['Counseling'] },
+]
 
 const PRIORITY_COLORS = { High: 'priority-high', Medium: 'priority-medium', Low: 'priority-low' }
-const STATUS_BADGES    = { Open: 'badge-blue', 'In Progress': 'badge-gold', Completed: 'badge-green', Cancelled: 'badge-red' }
+const STATUS_BADGES = { Open: 'badge-blue', 'In Progress': 'badge-gold', Completed: 'badge-green', Cancelled: 'badge-red' }
 
 const EMPTY_FORM = {
   title: '', description: '', category: 'Medical', priority: 'Medium',
@@ -15,12 +23,7 @@ const EMPTY_FORM = {
 }
 
 export default function TaskScreen({ navigate, user, handleLogout }) {
-  const [tasks, setTasks] = useState([])
-
-  useEffect(() => {
-    getTasks().then(setTasks)
-  }, [])
-  
+  const [tasks, setTasks] = useState(INITIAL_TASKS)
   const [search, setSearch] = useState('')
   const [filterStatus, setFilterStatus] = useState('All')
   const [filterPriority, setFilterPriority] = useState('All')
@@ -28,6 +31,8 @@ export default function TaskScreen({ navigate, user, handleLogout }) {
   const [editTarget, setEditTarget] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [errors, setErrors] = useState({})
+  const [generating, setGenerating] = useState(false)  // ✅ NEW
+  const [genError, setGenError] = useState(""); // ✅ ADD THIS LINE
 
   const filtered = tasks.filter((t) => {
     const matchSearch = t.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -58,22 +63,21 @@ export default function TaskScreen({ navigate, user, handleLogout }) {
     return e
   }
 
-  const handleSave = async () => {
+  const handleSave = () => {
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
     const skillArr = form.requiredSkills.split(',').map((s) => s.trim()).filter(Boolean)
+
     if (editTarget) {
-      await updateTask(editTarget, { ...form, requiredSkills: skillArr })
+      setTasks((prev) => prev.map((t) => t.id === editTarget ? { ...t, ...form, requiredSkills: skillArr } : t))
     } else {
-      await addTask({ ...form, requiredSkills: skillArr })
+      setTasks((prev) => [...prev, { id: Date.now(), ...form, requiredSkills: skillArr }])
     }
-    setTasks(await getTasks())
     setShowModal(false)
   }
 
-  const handleDelete = async (id) => {
+  const handleDelete = (id) => {
     if (window.confirm('Delete this task?')) {
-      await deleteTask(id)
       setTasks((prev) => prev.filter((t) => t.id !== id))
     }
   }
@@ -82,6 +86,36 @@ export default function TaskScreen({ navigate, user, handleLogout }) {
     setForm((f) => ({ ...f, [field]: e.target.value }))
     if (errors[field]) setErrors((er) => ({ ...er, [field]: '' }))
   }
+
+  // ✅ NEW — Gemini AI description generator
+  const generateDescription = async () => {
+    if (!form.title.trim()) {
+      setGenError("Enter a task title first.");
+      return;
+    }
+
+    setGenerating(true);
+    setGenError("");
+
+    try {
+      const prompt = `
+Write a clear, professional 1-2 sentence description for this volunteer task.
+
+Task: ${form.title}
+Category: ${form.category}
+Priority: ${form.priority}
+`;
+
+      const text = await generateTaskDescription(prompt);
+
+      setForm((f) => ({ ...f, description: text }));
+    } catch (err) {
+      console.error(err);
+      setGenError("AI generation failed. Check API key.");
+    }
+
+    setGenerating(false);
+  };
 
   return (
     <div className="app-layout">
@@ -185,12 +219,24 @@ export default function TaskScreen({ navigate, user, handleLogout }) {
               onChange={handleChange('title')}
               error={errors.title}
             />
+
+            {/* ✅ NEW — Gemini button + Textarea */}
             <Textarea
               label="Description"
               placeholder="Describe the task in detail…"
               value={form.description}
               onChange={handleChange('description')}
             />
+            <Button
+              variant="secondary"
+              full
+              onClick={generateDescription}
+              disabled={generating}
+              style={{ marginBottom: '1rem' }}
+            >
+              {generating ? '✨ Generating...' : '✨ Generate with Gemini AI'}
+            </Button>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <Select label="Category" value={form.category} onChange={handleChange('category')}>
                 {['Medical', 'Logistics', 'Education', 'IT', 'Healthcare', 'Construction', 'Outreach'].map((c) => (
