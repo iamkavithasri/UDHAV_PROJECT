@@ -2,20 +2,20 @@ import React, { useState } from 'react'
 import Header from '../components/Header'
 import Button from '../components/Button'
 import { Input, Select, Textarea } from '../components/Input'
-import { generateTaskDescription } from "../services/gemini";
+import { generateTaskDescription } from '../services/gemini'
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY
 
 const INITIAL_TASKS = [
-  { id: 1, title: 'Medical Camp Setup', description: 'Setup and manage medical equipment for the camp in Tambaram.', category: 'Medical', priority: 'High', status: 'Open', deadline: '2025-02-15', requiredSkills: ['Medical', 'First Aid'] },
-  { id: 2, title: 'Food Distribution Drive', description: 'Organize and distribute food packets to 500 families.', category: 'Logistics', priority: 'High', status: 'In Progress', deadline: '2025-02-10', requiredSkills: ['Logistics', 'Cooking'] },
-  { id: 3, title: 'Children\'s Education', description: 'Conduct weekend literacy classes for underprivileged kids.', category: 'Education', priority: 'Medium', status: 'Open', deadline: '2025-03-01', requiredSkills: ['Teaching'] },
-  { id: 4, title: 'Website Redesign', description: 'Redesign the organization website with modern UI.', category: 'IT', priority: 'Low', status: 'Open', deadline: '2025-03-20', requiredSkills: ['IT Support', 'Design'] },
-  { id: 5, title: 'Elder Care Program', description: 'Weekly visits and assistance for elderly residents.', category: 'Healthcare', priority: 'Medium', status: 'Completed', deadline: '2025-01-30', requiredSkills: ['Counseling'] },
+  { id: 1, title: 'Medical Camp Setup',        description: 'Setup and manage medical equipment for the camp in Tambaram.', category: 'Medical',     priority: 'High',   status: 'Open',        deadline: '2025-02-15', requiredSkills: ['Medical', 'First Aid'] },
+  { id: 2, title: 'Food Distribution Drive',   description: 'Organize and distribute food packets to 500 families.',        category: 'Logistics',   priority: 'High',   status: 'In Progress', deadline: '2025-02-10', requiredSkills: ['Logistics', 'Cooking'] },
+  { id: 3, title: 'Children\'s Education',     description: 'Conduct weekend literacy classes for underprivileged kids.',   category: 'Education',   priority: 'Medium', status: 'Open',        deadline: '2025-03-01', requiredSkills: ['Teaching'] },
+  { id: 4, title: 'Website Redesign',          description: 'Redesign the organization website with modern UI.',            category: 'IT',          priority: 'Low',    status: 'Open',        deadline: '2025-03-20', requiredSkills: ['IT Support', 'Design'] },
+  { id: 5, title: 'Elder Care Program',        description: 'Weekly visits and assistance for elderly residents.',          category: 'Healthcare',  priority: 'Medium', status: 'Completed',   deadline: '2025-01-30', requiredSkills: ['Counseling'] },
 ]
 
 const PRIORITY_COLORS = { High: 'priority-high', Medium: 'priority-medium', Low: 'priority-low' }
-const STATUS_BADGES = { Open: 'badge-blue', 'In Progress': 'badge-gold', Completed: 'badge-green', Cancelled: 'badge-red' }
+const STATUS_BADGES    = { Open: 'badge-blue', 'In Progress': 'badge-gold', Completed: 'badge-green', Cancelled: 'badge-red' }
 
 const EMPTY_FORM = {
   title: '', description: '', category: 'Medical', priority: 'Medium',
@@ -32,7 +32,7 @@ export default function TaskScreen({ navigate, user, handleLogout }) {
   const [form, setForm] = useState(EMPTY_FORM)
   const [errors, setErrors] = useState({})
   const [generating, setGenerating] = useState(false)  // ✅ NEW
-  const [genError, setGenError] = useState(""); // ✅ ADD THIS LINE
+
 
   const filtered = tasks.filter((t) => {
     const matchSearch = t.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -89,33 +89,28 @@ export default function TaskScreen({ navigate, user, handleLogout }) {
 
   // ✅ NEW — Gemini AI description generator
   const generateDescription = async () => {
-    if (!form.title.trim()) {
-      setGenError("Enter a task title first.");
-      return;
-    }
+  if (!form.title.trim()) {
+    alert('Please enter a task title first!')
+    return
+  }
 
-    setGenerating(true);
-    setGenError("");
+  setGenerating(true)
 
-    try {
-      const prompt = `
-Write a clear, professional 1-2 sentence description for this volunteer task.
+  try {
+    const prompt = `Write a short 1-2 sentence task description for a volunteer management app.
+Task title: "${form.title}".
+Category: "${form.category}".
+Be clear, professional, and concise. Do NOT give multiple options.`
 
-Task: ${form.title}
-Category: ${form.category}
-Priority: ${form.priority}
-`;
+    const text = await generateTaskDescription(prompt)
 
-      const text = await generateTaskDescription(prompt);
-
-      setForm((f) => ({ ...f, description: text }));
-    } catch (err) {
-      console.error(err);
-      setGenError("AI generation failed. Check API key.");
-    }
-
-    setGenerating(false);
-  };
+    setForm((f) => ({ ...f, description: text }))
+  } catch (err) {
+    alert('Failed to generate description. Try again!')
+  } finally {
+    setGenerating(false)
+  }
+}
 
   return (
     <div className="app-layout">
